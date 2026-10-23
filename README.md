@@ -1,5 +1,9 @@
 # TIS 相册 · TisViewer
 
+[![build](https://github.com/L-aoc/TIS/actions/workflows/build.yml/badge.svg)](https://github.com/L-aoc/TIS/actions/workflows/build.yml)
+[![release](https://img.shields.io/github/v/release/L-aoc/TIS)](https://github.com/L-aoc/TIS/releases)
+[![license](https://img.shields.io/github/license/L-aoc/TIS)](LICENSE)
+
 一个用 C# / WPF 编写的 Windows 桌面应用，用来**查看**和**生成** `.tis` 相册文件。
 
 `.tis` 本质上是一个 **7z 压缩包**，里面按顺序存放照片和视频。TisViewer 会把压缩包里的媒体按内部顺序展示，并用 `文件名-原始文件名` 作为标题，例如打开 `cat.tis` 时标题栏显示 `cat.tis-大橘`、`cat.tis-暹罗`。
@@ -30,6 +34,8 @@
 ```
 dist\TisViewer.exe
 ```
+
+也可以直接从 [GitHub Releases](https://github.com/L-aoc/TIS/releases) 下载 `TisViewer-1.0.0-win-x64.zip`。
 
 运行要求：
 
@@ -209,7 +215,7 @@ $env:TIS_DATA_DIR = "D:\PortableTisData"
 
 本项目使用 [MIT License](LICENSE)。
 
-欢迎提交 Issue 和 Pull Request。提交前请先运行一次 `dotnet build -c Release`，并尽量保持现有的代码风格与中文界面文案。
+GitHub 仓库：[L-aoc/TIS](https://github.com/L-aoc/TIS)。欢迎提交 Issue 和 Pull Request。提交前请先运行一次 `dotnet build -c Release`，并尽量保持现有的代码风格与中文界面文案。
 
 ## 致谢
 
