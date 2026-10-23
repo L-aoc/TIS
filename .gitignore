@@ -1,0 +1,17 @@
+bin/
+obj/
+dist/
+dist-single/
+release/
+.nuget/
+.dotnet_home/
+.tools/
+demo/.data/
+demo/.tests/
+demo/.smoke*/
+demo/screenshots/
+testdata/
+.vs/
+scratch/
+*.user
+*.suo
