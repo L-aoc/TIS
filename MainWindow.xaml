@@ -3,10 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="TIS 相册"
-        Width="1320"
-        Height="840"
-        MinWidth="900"
-        MinHeight="580"
+        Width="1000"
+        Height="700"
+        MinWidth="840"
+        MinHeight="520"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         Background="{StaticResource Bg}"
@@ -24,30 +24,30 @@
         Loaded="Window_Loaded">
 
     <shell:WindowChrome.WindowChrome>
-        <shell:WindowChrome CaptionHeight="48"
-                            ResizeBorderThickness="6"
+        <shell:WindowChrome CaptionHeight="42"
+                            ResizeBorderThickness="4"
                             GlassFrameThickness="0"
                             UseAeroCaptionButtons="False" />
     </shell:WindowChrome.WindowChrome>
 
     <Window.Resources>
         <Style x:Key="BigPlayStyle" TargetType="{x:Type Button}">
-            <Setter Property="Width" Value="86" />
-            <Setter Property="Height" Value="86" />
+            <Setter Property="Width" Value="74" />
+            <Setter Property="Height" Value="74" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Button}">
                         <Grid>
-                            <Ellipse x:Name="Circle" Fill="#D9F2B45C" />
+                            <Ellipse x:Name="Circle" Fill="#D9E8B264" />
                             <TextBlock Text="&#xE768;"
                                        FontFamily="{StaticResource IconFont}"
-                                       FontSize="30"
+                                       FontSize="25"
                                        Foreground="#141414"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
-                                       Margin="5,0,0,0" />
+                                       Margin="4,0,0,0" />
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -61,65 +61,81 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
-        <Style x:Key="Badge" TargetType="{x:Type Border}">
-            <Setter Property="Background" Value="#CC141922" />
-            <Setter Property="BorderBrush" Value="#2BFFFFFF" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Padding" Value="9,4" />
-        </Style>
     </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition x:Name="TitleRow" Height="48" />
+            <RowDefinition x:Name="TitleRow" Height="42" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!--  Custom title bar  -->
+        <!--  Compact title bar  -->
         <Border x:Name="TitleBar"
                 Grid.Row="0"
-                Background="#0E1117"
-                BorderBrush="{StaticResource Stroke}"
+                Background="#0E0E10"
+                BorderBrush="#242427"
                 BorderThickness="0,0,0,1">
             <Grid>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                <StackPanel x:Name="ViewerHeader"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Margin="6,0,0,0"
+                            Visibility="Collapsed">
                     <Button x:Name="HomeButton"
                             Style="{StaticResource ToolButton}"
                             Content="&#xE72B;"
                             ToolTip="返回首页"
-                            Visibility="Collapsed"
                             Click="Home_Click"
                             shell:WindowChrome.IsHitTestVisibleInChrome="True" />
-                    <Image Width="23"
-                           Height="23"
-                           Margin="8,0,10,0"
-                           Source="Assets/app.png"
-                           RenderOptions.BitmapScalingMode="HighQuality" />
                     <TextBlock x:Name="TitleText"
-                               Text="TIS 相册"
-                               FontSize="13.5"
+                               FontSize="12.5"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center"
-                               TextTrimming="CharacterEllipsis"
-                               MaxWidth="560" />
+                               Margin="4,0,0,0"
+                               MaxWidth="190"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="InfoMeta"
+                               FontSize="10.5"
+                               Foreground="{StaticResource Muted}"
+                               VerticalAlignment="Center"
+                               Margin="10,0,0,0"
+                               MaxWidth="90"
+                               TextTrimming="CharacterEllipsis" />
+                    <Border x:Name="PageBadge"
+                            Margin="10,0,0,0"
+                            Padding="7,2"
+                            CornerRadius="5"
+                            Background="#1D1D20"
+                            BorderBrush="#303034"
+                            BorderThickness="1"
+                            VerticalAlignment="Center">
+                        <TextBlock x:Name="InfoIndex"
+                                   Text="1 / 1"
+                                   FontSize="10"
+                                   Foreground="#B9B9BF" />
+                    </Border>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <Button x:Name="OpenQuickButton"
-                            Style="{StaticResource ToolButton}"
-                            Content="&#xE8E5;"
-                            ToolTip="打开 TIS 文件 (Ctrl+O)"
-                            Click="OpenFile_Click"
-                            shell:WindowChrome.IsHitTestVisibleInChrome="True" />
-                    <Button x:Name="NewQuickButton"
-                            Style="{StaticResource ToolButton}"
-                            Content="&#xE710;"
-                            ToolTip="新建 TIS 文件 (Ctrl+N)"
-                            Click="NewArchive_Click"
-                            shell:WindowChrome.IsHitTestVisibleInChrome="True" />
-                    <Border Width="1" Height="18" Background="{StaticResource Stroke}" Margin="8,0,8,0" />
+                    <StackPanel x:Name="ViewerActions"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Visibility="Collapsed">
+                        <Button x:Name="OpenQuickButton"
+                                Style="{StaticResource ToolButton}"
+                                Content="&#xE8E5;"
+                                ToolTip="打开 TIS 文件 (Ctrl+O)"
+                                Click="OpenFile_Click"
+                                shell:WindowChrome.IsHitTestVisibleInChrome="True" />
+                        <Button x:Name="NewQuickButton"
+                                Style="{StaticResource ToolButton}"
+                                Content="&#xE710;"
+                                ToolTip="新建 TIS 文件 (Ctrl+N)"
+                                Click="NewArchive_Click"
+                                shell:WindowChrome.IsHitTestVisibleInChrome="True" />
+                        <Border Width="1" Height="16" Background="#303034" Margin="6,0,6,0" />
+                    </StackPanel>
+
                     <Button Style="{StaticResource WindowButton}"
                             Content="&#xE921;"
                             ToolTip="最小化"
@@ -141,113 +157,135 @@
         </Border>
 
         <Grid Grid.Row="1">
-            <!--  HOME  -->
+            <!--  Home: compact sidebar + recent grid  -->
             <Grid x:Name="HomeView">
-                <Border IsHitTestVisible="False">
-                    <Border.Background>
-                        <RadialGradientBrush Center="0.82,0.02" GradientOrigin="0.82,0.02" RadiusX="0.72" RadiusY="0.72">
-                            <GradientStop Color="#26F2B45C" Offset="0" />
-                            <GradientStop Color="#0AF2B45C" Offset="0.45" />
-                            <GradientStop Color="#00F2B45C" Offset="1" />
-                        </RadialGradientBrush>
-                    </Border.Background>
-                </Border>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="250" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
-                    <StackPanel MaxWidth="1080" Margin="52,38,52,44" HorizontalAlignment="Stretch">
-                        <StackPanel>
-                            <TextBlock Text="TIS 相册"
-                                       FontSize="12"
-                                       FontWeight="SemiBold"
-                                       Foreground="{StaticResource Accent}" />
-                            <TextBlock Text="照片和视频，装进一个文件。"
-                                       FontSize="40"
-                                       FontWeight="Bold"
-                                       Margin="0,12,0,0"
-                                       Foreground="{StaticResource Text}" />
-                            <TextBlock Text="把散落的照片和视频按你喜欢的顺序打包成 .tis。打开时用左右方向键，像翻相册一样查看。"
-                                       FontSize="14.5"
-                                       Foreground="{StaticResource Muted}"
-                                       TextWrapping="Wrap"
-                                       MaxWidth="660"
-                                       HorizontalAlignment="Left"
-                                       Margin="0,14,0,0"
-                                       LineHeight="24" />
+                <Border Grid.Column="0"
+                        Background="#141416"
+                        BorderBrush="#26262A"
+                        BorderThickness="0,0,1,0">
+                    <Grid Margin="16,18,16,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Orientation="Horizontal">
+                            <Image Width="28"
+                                   Height="28"
+                                   Source="Assets/app.png"
+                                   RenderOptions.BitmapScalingMode="HighQuality" />
+                            <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="TIS 相册" FontSize="14.5" FontWeight="SemiBold" />
+                                <TextBlock Text="本地相册容器" FontSize="10" Foreground="#73737A" Margin="0,2,0,0" />
+                            </StackPanel>
                         </StackPanel>
 
-                        <UniformGrid Columns="3" Margin="0,36,0,0">
-                            <Button Style="{StaticResource CardButton}"
-                                    Margin="0,0,14,0"
-                                    MinHeight="118"
-                                    Click="OpenFile_Click">
-                                <StackPanel>
-                                    <Border Width="38" Height="38" CornerRadius="10" Background="#2B2318" HorizontalAlignment="Left">
-                                        <TextBlock Text="&#xE8E5;"
-                                                   FontFamily="{StaticResource IconFont}"
-                                                   FontSize="17"
-                                                   Foreground="{StaticResource Accent}"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center" />
-                                    </Border>
-                                    <TextBlock Text="打开 TIS 文件" FontSize="14.5" FontWeight="SemiBold" Margin="0,12,0,0" />
-                                    <TextBlock Text="浏览并查看 .tis 相册" FontSize="11.5" Foreground="{StaticResource Muted}" Margin="0,4,0,0" />
+                        <StackPanel Grid.Row="1" Margin="0,26,0,0">
+                            <Button Style="{StaticResource SidebarButton}" Click="OpenFile_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE8E5;"
+                                               FontFamily="{StaticResource IconFont}"
+                                               FontSize="15"
+                                               Foreground="#C9C9CF"
+                                               Width="26"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Text="打开 TIS 文件" FontSize="13" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
-
-                            <Button Style="{StaticResource CardButton}"
-                                    Margin="0,0,14,0"
-                                    MinHeight="118"
-                                    Click="NewArchive_Click">
-                                <StackPanel>
-                                    <Border Width="38" Height="38" CornerRadius="10" Background="#18222E" HorizontalAlignment="Left">
-                                        <TextBlock Text="&#xE710;"
-                                                   FontFamily="{StaticResource IconFont}"
-                                                   FontSize="17"
-                                                   Foreground="#7FB2FF"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center" />
-                                    </Border>
-                                    <TextBlock Text="新建 TIS 文件" FontSize="14.5" FontWeight="SemiBold" Margin="0,12,0,0" />
-                                    <TextBlock Text="添加、排序、选封面并打包" FontSize="11.5" Foreground="{StaticResource Muted}" Margin="0,4,0,0" />
+                            <Button Style="{StaticResource SidebarButton}" Click="NewArchive_Click" Margin="0,8,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE710;"
+                                               FontFamily="{StaticResource IconFont}"
+                                               FontSize="15"
+                                               Foreground="#C9C9CF"
+                                               Width="26"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Text="封装 TIS 文件" FontSize="13" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
-
-                            <Button Style="{StaticResource CardButton}"
-                                    MinHeight="118"
-                                    Click="ToggleAssociation_Click">
-                                <StackPanel>
-                                    <Border Width="38" Height="38" CornerRadius="10" Background="#1A2620" HorizontalAlignment="Left">
-                                        <TextBlock Text="&#xE71B;"
-                                                   FontFamily="{StaticResource IconFont}"
-                                                   FontSize="17"
-                                                   Foreground="#89C9A6"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center" />
-                                    </Border>
-                                    <TextBlock Text="关联 .tis 文件" FontSize="14.5" FontWeight="SemiBold" Margin="0,12,0,0" />
-                                    <TextBlock x:Name="AssociationHint"
-                                               Text="让双击 .tis 直接打开本应用"
-                                               FontSize="11.5"
-                                               Foreground="{StaticResource Muted}"
-                                               Margin="0,4,0,0" />
+                            <Button Style="{StaticResource SidebarButton}" Click="ToggleAssociation_Click" Margin="0,8,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE71B;"
+                                               FontFamily="{StaticResource IconFont}"
+                                               FontSize="15"
+                                               Foreground="#C9C9CF"
+                                               Width="26"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Text="关联 .tis 文件" FontSize="13" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
-                        </UniformGrid>
+                            <TextBlock x:Name="AssociationStatus"
+                                       Text="未关联 · 双击 .tis 不会自动打开"
+                                       FontSize="10"
+                                       Foreground="#6E6E75"
+                                       Margin="4,9,0,0"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
 
-                        <Grid Margin="0,42,0,0">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <Grid>
-                                <TextBlock Text="最近打开" FontSize="15" FontWeight="SemiBold" />
-                                <Button Content="清空"
-                                        Style="{StaticResource TextButton}"
-                                        HorizontalAlignment="Right"
-                                        Click="ClearRecent_Click" />
-                            </Grid>
+                        <Border Grid.Row="3"
+                                Background="#152F39"
+                                BorderBrush="#24505E"
+                                BorderThickness="1"
+                                CornerRadius="10"
+                                Padding="12">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE946;"
+                                               FontFamily="{StaticResource IconFont}"
+                                               FontSize="12"
+                                               Foreground="#7FC3D8"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Text="安全提示"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               Foreground="#9AC9D8"
+                                               Margin="7,0,0,0"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                                <TextBlock Text="请确保 TIS 文件来源可信，以防止设备受到安全侵害。"
+                                           FontSize="10"
+                                           Foreground="#8CB9C7"
+                                           TextWrapping="Wrap"
+                                           LineHeight="15"
+                                           Margin="0,7,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
 
-                            <ItemsControl x:Name="RecentList" Grid.Row="1" Margin="0,12,0,0">
+                <Grid Grid.Column="1" Background="#0F0F10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Margin="24,16,24,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="最近打开" FontSize="14" FontWeight="SemiBold" />
+                            <TextBlock x:Name="RecentCount"
+                                       Text="0 个文件"
+                                       FontSize="10.5"
+                                       Foreground="#73737A"
+                                       Margin="9,0,0,0"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                        <Button Content="清空"
+                                Style="{StaticResource TextButton}"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Click="ClearRecent_Click" />
+                    </Grid>
+
+                    <Grid Grid.Row="1">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16,10,16,16">
+                            <ItemsControl x:Name="RecentList">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <WrapPanel />
@@ -255,87 +293,93 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Button Style="{StaticResource RecentCardButton}"
-                                                Width="270"
-                                                Height="88"
-                                                Margin="0,0,10,10"
+                                        <Button Style="{StaticResource RecentTile}"
                                                 Tag="{Binding Path}"
                                                 ToolTip="{Binding Path}"
                                                 Click="Recent_Click">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="68" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <Border Width="68" Height="68" CornerRadius="10" Background="#1A2029" ClipToBounds="True">
+                                            <StackPanel Width="150">
+                                                <Border Width="150"
+                                                        Height="142"
+                                                        CornerRadius="10"
+                                                        Background="#1A1A1D"
+                                                        ClipToBounds="True">
                                                     <Grid>
-                                                        <TextBlock Text="&#xE8B9;"
+                                                        <TextBlock Text="{Binding Glyph}"
                                                                    FontFamily="{StaticResource IconFont}"
-                                                                   FontSize="22"
-                                                                   Foreground="#4B5666"
+                                                                   FontSize="25"
+                                                                   Foreground="#47474E"
                                                                    HorizontalAlignment="Center"
                                                                    VerticalAlignment="Center" />
                                                         <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                                        <Border Width="24"
+                                                                Height="24"
+                                                                CornerRadius="12"
+                                                                Background="#B3000000"
+                                                                HorizontalAlignment="Center"
+                                                                VerticalAlignment="Center"
+                                                                Visibility="{Binding IsVideo, Converter={StaticResource BoolToVis}}">
+                                                            <TextBlock Text="&#xE768;"
+                                                                       FontFamily="{StaticResource IconFont}"
+                                                                       FontSize="9"
+                                                                       Foreground="#F1EFE9"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"
+                                                                       Margin="2,0,0,0" />
+                                                        </Border>
                                                     </Grid>
                                                 </Border>
-                                                <StackPanel Grid.Column="1" Margin="12,2,0,0" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Name}"
-                                                               FontSize="13"
-                                                               FontWeight="SemiBold"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding Folder}"
-                                                               FontSize="10.5"
-                                                               Foreground="{StaticResource Muted}"
-                                                               Margin="0,5,0,0"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding When}"
-                                                               FontSize="10.5"
-                                                               Foreground="#6E7684"
-                                                               Margin="0,3,0,0" />
-                                                </StackPanel>
-                                            </Grid>
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontSize="12"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Margin="2,9,0,0" />
+                                                <TextBlock Text="{Binding When}"
+                                                           FontSize="10"
+                                                           Foreground="#73737A"
+                                                           Margin="2,4,0,0" />
+                                            </StackPanel>
                                         </Button>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                        </ScrollViewer>
 
-                            <TextBlock x:Name="RecentEmpty"
-                                       Grid.Row="1"
-                                       Text="还没有打开过文件。打开一个 .tis，它会出现在这里。"
-                                       FontSize="12.5"
-                                       Foreground="#6E7684"
-                                       Margin="0,14,0,10" />
-                        </Grid>
-
-                        <Border Margin="0,34,0,0"
-                                Padding="16,12"
-                                CornerRadius="8"
-                                Background="#0F1319"
-                                BorderBrush="{StaticResource Stroke}"
-                                BorderThickness="1">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE946;"
+                        <StackPanel x:Name="RecentEmpty"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center">
+                            <Border Width="54" Height="54" CornerRadius="15" Background="#1A1A1D" HorizontalAlignment="Center">
+                                <TextBlock Text="&#xE8B9;"
                                            FontFamily="{StaticResource IconFont}"
-                                           FontSize="13"
-                                           Foreground="#6E7684"
-                                           VerticalAlignment="Center"
-                                           Margin="0,0,9,0" />
-                                <TextBlock Text="TIS 文件本质上是 7z 压缩包，仍可用 7-Zip 解压；也可以把任意包含图片/视频的 7z 改名为 .tis 打开。"
-                                           FontSize="11.5"
-                                           Foreground="#6E7684"
-                                           VerticalAlignment="Center"
-                                           TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </ScrollViewer>
+                                           FontSize="23"
+                                           Foreground="#4A4A51"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock Text="还没有打开过 TIS 文件"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       Foreground="#A9A9B0"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,14,0,0" />
+                            <TextBlock Text="打开一个 .tis，它会以封面缩略图出现在这里"
+                                       FontSize="10.5"
+                                       Foreground="#6E6E75"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,6,0,0" />
+                            <Button Content="打开 TIS 文件"
+                                    Style="{StaticResource GhostButton}"
+                                    HorizontalAlignment="Center"
+                                    Margin="0,16,0,0"
+                                    Click="OpenFile_Click" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
             </Grid>
 
-            <!--  VIEWER  -->
-            <Grid x:Name="ViewerView" Background="#050608" Visibility="Collapsed" ClipToBounds="True">
+            <!--  Viewer: compact QuickLook-like media window  -->
+            <Grid x:Name="ViewerView" Background="#0A0A0B" Visibility="Collapsed" ClipToBounds="True">
                 <Grid x:Name="MediaStage"
-                      Margin="0,0,0,60"
-                      Background="#050608"
+                      Background="#0A0A0B"
                       ClipToBounds="True"
                       MouseWheel="MediaStage_MouseWheel"
                       MouseLeftButtonDown="MediaStage_MouseLeftButtonDown"
@@ -370,7 +414,7 @@
                         Content="&#xE76B;"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
-                        Margin="22,0,0,44"
+                        Margin="14,0,0,0"
                         ToolTip="上一张 (←)"
                         Click="Prev_Click" />
                 <Button x:Name="NextButton"
@@ -378,34 +422,13 @@
                         Content="&#xE76C;"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
-                        Margin="0,0,22,44"
+                        Margin="0,0,14,0"
                         ToolTip="下一张 (→)"
                         Click="Next_Click" />
 
-                <StackPanel Orientation="Horizontal"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Top"
-                            Margin="0,16,18,0">
-                    <Border x:Name="CoverBadge" Style="{StaticResource Badge}" Margin="0,0,8,0" Visibility="Collapsed">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE735;"
-                                       FontFamily="{StaticResource IconFont}"
-                                       FontSize="11"
-                                       Foreground="{StaticResource Accent}"
-                                       VerticalAlignment="Center"
-                                       Margin="0,0,5,0" />
-                            <TextBlock Text="封面" FontSize="10.5" Foreground="#E9E4D9" />
-                        </StackPanel>
-                    </Border>
-                    <Border x:Name="ZoomBadge" Style="{StaticResource Badge}" Visibility="Collapsed">
-                        <TextBlock x:Name="ZoomText" Text="100%" FontSize="10.5" Foreground="#E9E4D9" />
-                    </Border>
-                </StackPanel>
-
-                <!--  Loading  -->
-                <Border x:Name="LoadingOverlay" Background="#D9050608" Visibility="Collapsed">
+                <Border x:Name="LoadingOverlay" Background="#CC0A0A0B" Visibility="Collapsed">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Grid Width="44" Height="44" HorizontalAlignment="Center">
+                        <Grid Width="36" Height="36" HorizontalAlignment="Center">
                             <Ellipse Stroke="#22FFFFFF" StrokeThickness="3" />
                             <Ellipse Stroke="{StaticResource Accent}"
                                      StrokeThickness="3"
@@ -418,175 +441,118 @@
                         </Grid>
                         <TextBlock x:Name="LoadingText"
                                    Text="正在加载…"
-                                   FontSize="12.5"
-                                   Foreground="#C9CFD9"
+                                   FontSize="11.5"
+                                   Foreground="#C9C9CF"
                                    HorizontalAlignment="Center"
-                                   Margin="0,16,0,0" />
+                                   Margin="0,12,0,0" />
                         <ProgressBar x:Name="LoadingProgress"
                                      Style="{StaticResource FlatProgress}"
-                                     Width="220"
-                                     Margin="0,14,0,0"
+                                     Width="180"
+                                     Margin="0,12,0,0"
                                      Visibility="Collapsed" />
                     </StackPanel>
                 </Border>
 
-                <!--  Error  -->
-                <Border x:Name="ErrorOverlay" Background="#E6050608" Visibility="Collapsed">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480">
-                        <Border Width="52" Height="52" CornerRadius="14" Background="#2A1B18" HorizontalAlignment="Center">
+                <Border x:Name="ErrorOverlay" Background="#E60A0A0B" Visibility="Collapsed">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="440">
+                        <Border Width="46" Height="46" CornerRadius="13" Background="#2A1B18" HorizontalAlignment="Center">
                             <TextBlock Text="&#xE7BA;"
                                        FontFamily="{StaticResource IconFont}"
-                                       FontSize="22"
+                                       FontSize="19"
                                        Foreground="#E08A78"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center" />
                         </Border>
                         <TextBlock x:Name="ErrorTitle"
                                    Text="无法显示这个文件"
-                                   FontSize="18"
+                                   FontSize="16"
                                    FontWeight="SemiBold"
                                    HorizontalAlignment="Center"
-                                   Margin="0,18,0,0" />
+                                   Margin="0,14,0,0" />
                         <TextBlock x:Name="ErrorDetail"
                                    Text=""
-                                   FontSize="12.5"
+                                   FontSize="11.5"
                                    Foreground="{StaticResource Muted}"
                                    TextWrapping="Wrap"
                                    TextAlignment="Center"
                                    HorizontalAlignment="Center"
-                                   Margin="0,10,0,0" />
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
+                                   Margin="0,8,0,0" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
                             <Button Content="用默认应用打开"
                                     Style="{StaticResource PrimaryButton}"
+                                    Padding="16,8"
                                     Click="ErrorOpenDefault_Click" />
                             <Button Content="在文件夹中显示"
                                     Style="{StaticResource GhostButton}"
-                                    Margin="10,0,0,0"
+                                    Padding="16,8"
+                                    Margin="8,0,0,0"
                                     Click="ErrorReveal_Click" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <!--  Video controls  -->
                 <Border x:Name="VideoControls"
                         VerticalAlignment="Bottom"
                         HorizontalAlignment="Center"
-                        Margin="0,0,0,72"
-                        Padding="14,8,16,8"
-                        Background="#E610141B"
-                        BorderBrush="#24FFFFFF"
+                        Margin="14,0,14,16"
+                        MaxWidth="560"
+                        MinWidth="420"
+                        Padding="8,6,10,6"
+                        Background="#D9141417"
+                        BorderBrush="#26FFFFFF"
                         BorderThickness="1"
-                        CornerRadius="12"
+                        CornerRadius="10"
                         Visibility="Collapsed">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="360" />
+                            <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
                         <Button x:Name="PlayPauseButton"
                                 Style="{StaticResource ToolButton}"
+                                Width="30"
+                                Height="30"
                                 Content="&#xE768;"
                                 ToolTip="播放 / 暂停 (空格)"
                                 Click="PlayPause_Click" />
                         <TextBlock x:Name="CurrentTimeText"
                                    Grid.Column="1"
                                    Text="00:00"
-                                   FontSize="11.5"
-                                   Foreground="#C7CDD8"
+                                   FontSize="10.5"
+                                   Foreground="#C7C7CD"
                                    VerticalAlignment="Center"
-                                   Margin="6,0,10,0"
-                                   MinWidth="40" />
+                                   Margin="4,0,8,0"
+                                   MinWidth="36" />
                         <Slider x:Name="PositionSlider"
                                 Grid.Column="2"
                                 Style="{StaticResource MediaSlider}"
                                 VerticalAlignment="Center"
                                 Minimum="0"
                                 Maximum="1"
+                                MinWidth="100"
                                 ValueChanged="PositionSlider_ValueChanged"
                                 PreviewMouseLeftButtonDown="PositionSlider_PreviewMouseLeftButtonDown"
                                 PreviewMouseLeftButtonUp="PositionSlider_PreviewMouseLeftButtonUp" />
                         <TextBlock x:Name="TotalTimeText"
                                    Grid.Column="3"
                                    Text="00:00"
-                                   FontSize="11.5"
-                                   Foreground="#7F8794"
+                                   FontSize="10.5"
+                                   Foreground="#7F7F86"
                                    VerticalAlignment="Center"
-                                   Margin="10,0,10,0"
-                                   MinWidth="40" />
+                                   Margin="8,0,6,0"
+                                   MinWidth="36" />
                         <Button x:Name="MuteButton"
                                 Grid.Column="4"
                                 Style="{StaticResource ToolButton}"
+                                Width="30"
+                                Height="30"
                                 Content="&#xE767;"
                                 ToolTip="静音 (M)"
                                 Click="Mute_Click" />
-                    </Grid>
-                </Border>
-
-                <!--  Info bar  -->
-                <Border x:Name="InfoBar"
-                        VerticalAlignment="Bottom"
-                        Height="60"
-                        Background="#F20A0C10"
-                        BorderBrush="#1FFFFFFF"
-                        BorderThickness="0,1,0,0">
-                    <Grid Margin="20,0">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-                            <TextBlock x:Name="InfoIndex"
-                                       Text="1 / 1"
-                                       FontSize="12"
-                                       FontWeight="SemiBold"
-                                       Foreground="{StaticResource Accent}"
-                                       VerticalAlignment="Center" />
-                            <Border Width="1" Height="18" Background="#2B323D" Margin="14,0" />
-                            <TextBlock x:Name="InfoName"
-                                       Text=""
-                                       FontSize="14"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Center"
-                                       MaxWidth="340"
-                                       TextTrimming="CharacterEllipsis" />
-                            <Border Background="#1EF2B45C"
-                                    BorderBrush="#3AF2B45C"
-                                    BorderThickness="1"
-                                    CornerRadius="4"
-                                    Padding="6,2"
-                                    Margin="10,0,0,0"
-                                    VerticalAlignment="Center">
-                                <TextBlock x:Name="InfoExt"
-                                           Text="JPG"
-                                           FontSize="9.5"
-                                           Foreground="#F2C889" />
-                            </Border>
-                            <TextBlock x:Name="InfoMeta"
-                                       Text=""
-                                       FontSize="11.5"
-                                       Foreground="#7F8794"
-                                       VerticalAlignment="Center"
-                                       Margin="12,0,0,0" />
-                        </StackPanel>
-
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
-                            <TextBlock x:Name="HintText"
-                                       Text="← → 切换"
-                                       FontSize="11"
-                                       Foreground="#6E7684"
-                                       VerticalAlignment="Center"
-                                       Margin="0,0,10,0" />
-                            <Button x:Name="OpenFolderButton"
-                                    Style="{StaticResource ToolButton}"
-                                    Content="&#xE8B7;"
-                                    ToolTip="在文件夹中显示"
-                                    Click="OpenFolder_Click" />
-                            <Button x:Name="FullScreenButton"
-                                    Style="{StaticResource ToolButton}"
-                                    Content="&#xE740;"
-                                    ToolTip="全屏 (F)"
-                                    Click="Fullscreen_Click" />
-                        </StackPanel>
                     </Grid>
                 </Border>
 
@@ -594,13 +560,13 @@
                         Visibility="Collapsed"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Bottom"
-                        Margin="0,0,0,86"
-                        Padding="14,8"
-                        CornerRadius="8"
-                        Background="#E61E242E"
+                        Margin="0,0,0,80"
+                        Padding="12,7"
+                        CornerRadius="7"
+                        Background="#E61D1D20"
                         BorderBrush="#2AFFFFFF"
                         BorderThickness="1">
-                    <TextBlock x:Name="ToastText" Text="" FontSize="12" Foreground="#E9E4D9" />
+                    <TextBlock x:Name="ToastText" Text="" FontSize="11" Foreground="#E9E9E5" />
                 </Border>
             </Grid>
         </Grid>

@@ -2,15 +2,15 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!--  Palette  -->
-    <Color x:Key="BgColor">#0B0D11</Color>
-    <Color x:Key="SurfaceColor">#11141A</Color>
-    <Color x:Key="PanelColor">#171B23</Color>
-    <Color x:Key="PanelHoverColor">#1D222C</Color>
-    <Color x:Key="StrokeColor">#262C37</Color>
-    <Color x:Key="TextColor">#F4F1EA</Color>
-    <Color x:Key="MutedColor">#939AA7</Color>
-    <Color x:Key="AccentColor">#F2B45C</Color>
-    <Color x:Key="AccentDarkColor">#D89A43</Color>
+    <Color x:Key="BgColor">#0E0E10</Color>
+    <Color x:Key="SurfaceColor">#131315</Color>
+    <Color x:Key="PanelColor">#1A1A1D</Color>
+    <Color x:Key="PanelHoverColor">#232327</Color>
+    <Color x:Key="StrokeColor">#2C2C30</Color>
+    <Color x:Key="TextColor">#F1EFE9</Color>
+    <Color x:Key="MutedColor">#8A8A91</Color>
+    <Color x:Key="AccentColor">#E8B264</Color>
+    <Color x:Key="AccentDarkColor">#D39A4C</Color>
 
     <SolidColorBrush x:Key="Bg" Color="{StaticResource BgColor}" />
     <SolidColorBrush x:Key="Surface" Color="{StaticResource SurfaceColor}" />
@@ -30,7 +30,7 @@
 
     <!--  Tooltip  -->
     <Style TargetType="{x:Type ToolTip}">
-        <Setter Property="Background" Value="#1E242E" />
+        <Setter Property="Background" Value="#1D1D20" />
         <Setter Property="Foreground" Value="{StaticResource Text}" />
         <Setter Property="BorderBrush" Value="{StaticResource Stroke}" />
         <Setter Property="BorderThickness" Value="1" />
@@ -138,11 +138,11 @@
     </Style>
 
     <Style x:Key="ToolButton" TargetType="{x:Type Button}" BasedOn="{StaticResource BaseButton}">
-        <Setter Property="Width" Value="36" />
-        <Setter Property="Height" Value="36" />
+        <Setter Property="Width" Value="34" />
+        <Setter Property="Height" Value="34" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
-        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontSize" Value="14" />
         <Setter Property="Foreground" Value="{StaticResource Muted}" />
         <Setter Property="Template">
             <Setter.Value>
@@ -154,11 +154,11 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#20252F" />
+                            <Setter TargetName="Bd" Property="Background" Value="#2A2A2E" />
                             <Setter Property="Foreground" Value="{StaticResource Text}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#2A303C" />
+                            <Setter TargetName="Bd" Property="Background" Value="#333338" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.3" />
@@ -170,12 +170,12 @@
     </Style>
 
     <Style x:Key="WindowButton" TargetType="{x:Type Button}" BasedOn="{StaticResource BaseButton}">
-        <Setter Property="Width" Value="46" />
-        <Setter Property="Height" Value="46" />
+        <Setter Property="Width" Value="42" />
+        <Setter Property="Height" Value="42" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
         <Setter Property="FontSize" Value="10" />
-        <Setter Property="Foreground" Value="#B9C0CC" />
+        <Setter Property="Foreground" Value="#B9B9BF" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
@@ -216,28 +216,31 @@
     </Style>
 
     <Style x:Key="NavButton" TargetType="{x:Type Button}" BasedOn="{StaticResource BaseButton}">
-        <Setter Property="Width" Value="48" />
-        <Setter Property="Height" Value="48" />
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
-        <Setter Property="FontSize" Value="17" />
-        <Setter Property="Foreground" Value="#EDEAE3" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="Foreground" Value="#F1EFE9" />
+        <Setter Property="Opacity" Value="0.5" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
-                    <Border x:Name="Bd" Background="#99000000" BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="24">
+                    <Border x:Name="Bd" Background="#A6000000" BorderBrush="#26FFFFFF" BorderThickness="1" CornerRadius="20">
                         <ContentPresenter HorizontalAlignment="Center"
                                           VerticalAlignment="Center"
                                           TextElement.Foreground="{TemplateBinding Foreground}" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#E6F2B45C" />
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="#F2B45C" />
+                            <Setter Property="Opacity" Value="1" />
+                            <Setter TargetName="Bd" Property="Background" Value="#EDE8B264" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="#E8B264" />
                             <Setter Property="Foreground" Value="#141414" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Bd" Property="Opacity" Value="0.18" />
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.15" />
+                            <Setter Property="Opacity" Value="0.4" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -299,9 +302,82 @@
         </Setter>
     </Style>
 
+    <!--  Compact home sidebar button  -->
+    <Style x:Key="SidebarButton" TargetType="{x:Type Button}" BasedOn="{StaticResource BaseButton}">
+        <Setter Property="Height" Value="46" />
+        <Setter Property="Background" Value="#232326" />
+        <Setter Property="BorderBrush" Value="#303034" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="14,0" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border x:Name="Bd"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="10"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          TextElement.Foreground="{TemplateBinding Foreground}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#2C2C30" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="#3C3C41" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#343439" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.35" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--  Recent archive tile  -->
+    <Style x:Key="RecentTile" TargetType="{x:Type Button}" BasedOn="{StaticResource BaseButton}">
+        <Setter Property="Width" Value="168" />
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="Margin" Value="0,0,8,14" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Top" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border x:Name="Bd"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#17171A" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="#303035" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#1D1D21" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!--  Inputs  -->
     <Style x:Key="InputBox" TargetType="{x:Type TextBox}">
-        <Setter Property="Background" Value="#0E1117" />
+        <Setter Property="Background" Value="#101012" />
         <Setter Property="Foreground" Value="{StaticResource Text}" />
         <Setter Property="BorderBrush" Value="{StaticResource Stroke}" />
         <Setter Property="BorderThickness" Value="1" />
@@ -510,10 +586,10 @@
                                 <Thumb>
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="{x:Type Thumb}">
-                                            <Border x:Name="ThumbBd" Background="#39414F" CornerRadius="4" Margin="2,2" />
+                                            <Border x:Name="ThumbBd" Background="#3C3C41" CornerRadius="4" Margin="2,2" />
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="ThumbBd" Property="Background" Value="#4C5769" />
+                                                    <Setter TargetName="ThumbBd" Property="Background" Value="#55555C" />
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>

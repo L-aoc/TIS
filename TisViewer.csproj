@@ -11,10 +11,11 @@
     <RootNamespace>TisViewer</RootNamespace>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.0.0</Version>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
+    <Version>1.1.0</Version>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
     <Product>TIS 相册</Product>
+    <AssemblyTitle>TIS 相册</AssemblyTitle>
     <Description>TIS 相册查看器与生成器（.tis = 7z 压缩包）</Description>
     <Company>TIS</Company>
     <SatelliteResourceLanguages>zh-Hans;en</SatelliteResourceLanguages>

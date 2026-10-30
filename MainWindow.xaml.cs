@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,9 +18,19 @@ namespace TisViewer;
 
 public partial class MainWindow : Window
 {
+    private const double ToolbarHeight = 42;
+    private const double HomeWidth = 1000;
+    private const double HomeHeight = 700;
+    private const double ViewerMinWidth = 560;
+    private const double ViewerMinHeight = 360;
+    private const double ImageMaxDimension = 4096;
+    private const int ImageCacheLimit = 3;
+
     private readonly MediaCache _cache = new();
     private readonly ObservableCollection<RecentCard> _recentCards = [];
-    private readonly Dictionary<string, BitmapSource?> _recentThumbs = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ArchivePreview> _recentPreviews = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, BitmapSource> _imageCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly LinkedList<string> _imageCacheOrder = new();
     private readonly DispatcherTimer _videoTimer;
     private readonly DispatcherTimer _toastTimer;
     private readonly ScaleTransform _imageScale = new(1, 1);
@@ -31,12 +40,16 @@ public partial class MainWindow : Window
     private int _index = -1;
     private int _loadGeneration;
     private int _openGeneration;
-    private CancellationTokenSource? _loadCts;
     private int _recentLoadVersion;
+    private CancellationTokenSource? _loadCts;
+    private CancellationTokenSource? _prefetchCts;
     private bool _isClosing;
     private bool _isFullscreen;
     private WindowState _restoreState = WindowState.Normal;
-    private GridLength _restoreTitleHeight = new(48);
+    private GridLength _restoreTitleHeight = new(ToolbarHeight);
+    private Rect _homeBounds;
+    private bool _hasHomeBounds;
+    private Rect _preFullscreenBounds;
 
     private bool _isSeeking;
     private bool _suppressSlider;
@@ -48,6 +61,7 @@ public partial class MainWindow : Window
     private Point _panStart;
     private Point _panOrigin;
     private string? _currentVideoPath;
+    private string? _cachedArchivePath;
 
     public MainWindow()
     {
@@ -73,15 +87,10 @@ public partial class MainWindow : Window
             RotateTransform.AngleProperty,
             new DoubleAnimation(0, 360, TimeSpan.FromSeconds(1.1)) { RepeatBehavior = RepeatBehavior.Forever });
 
-        Loaded += (_, _) =>
-        {
-            RefreshRecent();
-            UpdateAssociationHint();
-            Activate();
-        };
-
         Task.Run(() => _cache.CleanupOldCache(TimeSpan.FromDays(14)));
     }
+
+    private bool IsViewerVisible => ViewerView.Visibility == Visibility.Visible;
 
     private TisMediaItem? CurrentItem =>
         _archive is not null && _index >= 0 && _index < _archive.Items.Count ? _archive.Items[_index] : null;
@@ -103,18 +112,27 @@ public partial class MainWindow : Window
             return;
         }
 
+        var wasHome = !IsViewerVisible;
+
         try
         {
             var openGeneration = ++_openGeneration;
+
+            if (wasHome)
+            {
+                _homeBounds = WindowState == WindowState.Maximized
+                    ? RestoreBounds
+                    : new Rect(Left, Top, Width, Height);
+                _hasHomeBounds = true;
+
+                EnterViewerChrome();
+                SetLoadingWindowSize();
+            }
+
             CloseVideo();
-
-            HomeView.Visibility = Visibility.Collapsed;
-            ViewerView.Visibility = Visibility.Visible;
-            HomeButton.Visibility = Visibility.Visible;
-            OpenQuickButton.Visibility = Visibility.Visible;
-            NewQuickButton.Visibility = Visibility.Visible;
-
+            CancelPrefetch();
             ShowLoadingOverlay("正在打开相册…");
+
             var archive = await Task.Run(() => TisArchive.Open(path));
             if (_isClosing || openGeneration != _openGeneration)
             {
@@ -123,21 +141,22 @@ public partial class MainWindow : Window
             }
 
             CancelLoad();
+            CancelPrefetch();
             CloseVideo();
+            if (!string.Equals(_cachedArchivePath, archive.FilePath, StringComparison.OrdinalIgnoreCase))
+            {
+                ClearImageCache();
+            }
+
+            _cachedArchivePath = archive.FilePath;
             _archive?.Dispose();
             _archive = archive;
             _index = archive.CoverIndex >= 0 ? archive.CoverIndex : 0;
 
-            HomeView.Visibility = Visibility.Collapsed;
-            ViewerView.Visibility = Visibility.Visible;
-            HomeButton.Visibility = Visibility.Visible;
-            OpenQuickButton.Visibility = Visibility.Visible;
-            NewQuickButton.Visibility = Visibility.Visible;
-
             RecentFiles.Add(archive.FilePath);
-            RefreshRecent();
-
             UpdateWindowTitle();
+            UpdatePageInfo();
+
             await ShowCurrentAsync();
         }
         catch (Exception ex)
@@ -165,6 +184,7 @@ public partial class MainWindow : Window
 
         _openGeneration++;
         CancelLoad();
+        CancelPrefetch();
         CloseVideo();
         _archive?.Dispose();
         _archive = null;
@@ -172,12 +192,15 @@ public partial class MainWindow : Window
 
         HomeView.Visibility = Visibility.Visible;
         ViewerView.Visibility = Visibility.Collapsed;
-        HomeButton.Visibility = Visibility.Collapsed;
+        ShowHomeChrome();
+        Title = "TIS 相册";
         TitleText.Text = "TIS 相册";
         TitleText.ToolTip = null;
-        Title = "TIS 相册";
+        InfoMeta.Text = string.Empty;
         HideError();
         HideLoadingOverlay();
+
+        RestoreHomeBounds();
         RefreshRecent();
     }
 
@@ -221,6 +244,7 @@ public partial class MainWindow : Window
         var generation = ++_loadGeneration;
 
         CancelLoad();
+        CancelPrefetch();
         var cts = new CancellationTokenSource();
         _loadCts = cts;
         var token = cts.Token;
@@ -228,7 +252,9 @@ public partial class MainWindow : Window
         HideError();
         ResetMedia();
         UpdateWindowTitle();
-        UpdateInfoBar();
+        UpdatePageInfo();
+        InfoMeta.Text = item.KindLabel;
+        MaximizeButton.Visibility = Visibility.Collapsed;
 
         if (item.Kind == TisMediaKind.Image)
         {
@@ -241,32 +267,33 @@ public partial class MainWindow : Window
         else
         {
             ShowError("无法查看这个文件", "它不是受支持的图片或视频格式。可以尝试用系统默认应用打开。");
+            FitWindowToContent(720, 480);
         }
     }
 
     private async Task LoadImageAsync(TisArchive archive, TisMediaItem item, int generation, CancellationToken token)
     {
+        if (TryGetCachedImage(item.EntryKey, out var cached))
+        {
+            DisplayImage(cached, item);
+            StartPrefetch(generation);
+            return;
+        }
+
         ShowLoadingOverlay("正在加载图片…");
         try
         {
             var bytes = await archive.ReadAllBytesAsync(item, token);
-            var decoded = await Task.Run(() => ImageLoader.Decode(bytes), token);
+            var decoded = await Task.Run(() => ImageLoader.Decode(bytes, (int)ImageMaxDimension), token);
 
             if (token.IsCancellationRequested || generation != _loadGeneration)
             {
                 return;
             }
 
-            ImageHost.Source = decoded.Image;
-            ImageHost.Visibility = Visibility.Visible;
-            _zoom = 1;
-            _imageTranslate.X = 0;
-            _imageTranslate.Y = 0;
-            ApplyImageTransform();
-
-            HideLoadingOverlay();
-            UpdateInfoMeta($"{item.KindLabel} · {decoded.PixelWidth} × {decoded.PixelHeight} · {item.SizeLabel}");
-            HintText.Text = "滚轮缩放 · 拖动平移 · ← → 切换";
+            AddImageToCache(item.EntryKey, decoded.Image);
+            DisplayImage(decoded.Image, item);
+            StartPrefetch(generation);
         }
         catch (OperationCanceledException)
         {
@@ -282,7 +309,23 @@ public partial class MainWindow : Window
             ShowError(
                 "无法显示这张图片",
                 "系统可能缺少该格式的解码器，或者文件已损坏。\n\n" + ex.Message);
+            FitWindowToContent(720, 480);
         }
+    }
+
+    private void DisplayImage(BitmapSource image, TisMediaItem item)
+    {
+        ImageHost.Source = image;
+        ImageHost.Visibility = Visibility.Visible;
+        _zoom = 1;
+        _imageTranslate.X = 0;
+        _imageTranslate.Y = 0;
+        ApplyImageTransform();
+
+        HideLoadingOverlay();
+        InfoMeta.Text = $"{image.PixelWidth} × {image.PixelHeight}";
+        FitWindowToContent(image.PixelWidth, image.PixelHeight);
+        CacheCoverThumbnail(image);
     }
 
     private async Task LoadVideoAsync(TisArchive archive, TisMediaItem item, int generation, CancellationToken token)
@@ -315,7 +358,6 @@ public partial class MainWindow : Window
             VideoHost.Visibility = Visibility.Visible;
             VideoControls.Visibility = Visibility.Visible;
             BigPlayButton.Visibility = Visibility.Collapsed;
-            HintText.Text = "空格 播放/暂停 · ← → 切换 · F 全屏";
 
             VideoHost.Play();
         }
@@ -333,6 +375,7 @@ public partial class MainWindow : Window
             ShowError(
                 "无法准备这个视频",
                 "解压视频时出现问题，或者文件已损坏。\n\n" + ex.Message);
+            FitWindowToContent(720, 480);
         }
     }
 
@@ -345,7 +388,6 @@ public partial class MainWindow : Window
         _imageTranslate.X = 0;
         _imageTranslate.Y = 0;
         ApplyImageTransform();
-        ZoomBadge.Visibility = Visibility.Collapsed;
         MediaStage.Cursor = Cursors.Arrow;
         InfoMeta.Text = string.Empty;
     }
@@ -396,33 +438,22 @@ public partial class MainWindow : Window
         TitleText.ToolTip = _archive.FilePath;
     }
 
-    private void UpdateInfoBar()
+    private void UpdatePageInfo()
     {
-        var item = CurrentItem;
-        if (_archive is null || item is null)
+        if (_archive is null || CurrentItem is null)
         {
+            InfoIndex.Text = "1 / 1";
             return;
         }
 
         InfoIndex.Text = $"{_index + 1} / {_archive.Items.Count}";
-        InfoName.Text = item.DisplayName;
-        InfoExt.Text = string.IsNullOrEmpty(item.Extension) ? "FILE" : item.Extension;
-        InfoMeta.Text = $"{item.KindLabel} · {item.SizeLabel}";
-        CoverBadge.Visibility = _archive.CoverIndex == _index ? Visibility.Visible : Visibility.Collapsed;
 
+        var multiple = _archive.Items.Count > 1;
+        PageBadge.Visibility = multiple ? Visibility.Visible : Visibility.Collapsed;
+        PrevButton.Visibility = multiple ? Visibility.Visible : Visibility.Collapsed;
+        NextButton.Visibility = multiple ? Visibility.Visible : Visibility.Collapsed;
         PrevButton.IsEnabled = _index > 0;
         NextButton.IsEnabled = _index < _archive.Items.Count - 1;
-        HintText.Text = item.Kind == TisMediaKind.Video
-            ? "空格 播放/暂停 · ← → 切换 · F 全屏"
-            : "滚轮缩放 · 拖动平移 · ← → 切换";
-    }
-
-    private void UpdateInfoMeta(string text)
-    {
-        if (CurrentItem is not null)
-        {
-            InfoMeta.Text = text;
-        }
     }
 
     // ------------------------------------------------------------------
@@ -460,12 +491,7 @@ public partial class MainWindow : Window
 
     private async Task GoToAsync(int index)
     {
-        if (_archive is null || index < 0 || index >= _archive.Items.Count)
-        {
-            return;
-        }
-
-        if (index == _index)
+        if (_archive is null || index < 0 || index >= _archive.Items.Count || index == _index)
         {
             return;
         }
@@ -489,17 +515,22 @@ public partial class MainWindow : Window
         _videoReady = true;
         HideLoadingOverlay();
 
+        var duration = TimeSpan.Zero;
         if (VideoHost.NaturalDuration.HasTimeSpan)
         {
-            var duration = VideoHost.NaturalDuration.TimeSpan;
+            duration = VideoHost.NaturalDuration.TimeSpan;
             _suppressSlider = true;
             PositionSlider.Maximum = Math.Max(duration.TotalSeconds, 0.1);
             _suppressSlider = false;
             TotalTimeText.Text = FormatTime(duration);
-            if (CurrentItem is not null)
-            {
-                UpdateInfoMeta($"视频 · {FormatTime(duration)} · {CurrentItem.SizeLabel}");
-            }
+        }
+
+        var width = VideoHost.NaturalVideoWidth;
+        var height = VideoHost.NaturalVideoHeight;
+        InfoMeta.Text = width > 0 && height > 0 ? $"{width} × {height}" : string.Empty;
+        if (width > 0 && height > 0)
+        {
+            FitWindowToContent(width, height);
         }
 
         VideoHost.Volume = 0.85;
@@ -536,12 +567,10 @@ public partial class MainWindow : Window
         ShowError(
             "无法播放这个视频",
             $"当前系统可能不支持 {CurrentItem?.Extension ?? "该"} 编码，或者文件已损坏。\n可以尝试用系统默认播放器打开。");
+        FitWindowToContent(720, 480);
     }
 
-    private void PlayPause_Click(object sender, RoutedEventArgs e)
-    {
-        TogglePlayPause();
-    }
+    private void PlayPause_Click(object sender, RoutedEventArgs e) => TogglePlayPause();
 
     private void TogglePlayPause()
     {
@@ -638,10 +667,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void PositionSlider_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        _isSeeking = true;
-    }
+    private void PositionSlider_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => _isSeeking = true;
 
     private void PositionSlider_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
@@ -696,10 +722,7 @@ public partial class MainWindow : Window
         VideoHost.IsMuted = _videoMuted;
         MuteButton.Content = _videoMuted ? "\uE74F" : "\uE767";
         ShowToast(_videoMuted ? "已静音" : "已取消静音");
-        if (IsLoaded)
-        {
-            Focus();
-        }
+        Focus();
     }
 
     private void ChangeVolume(double delta)
@@ -733,8 +756,6 @@ public partial class MainWindow : Window
     {
         _imageScale.ScaleX = _zoom;
         _imageScale.ScaleY = _zoom;
-        ZoomText.Text = $"{_zoom * 100:0}%";
-        ZoomBadge.Visibility = Math.Abs(_zoom - 1) < 0.01 ? Visibility.Collapsed : Visibility.Visible;
         MediaStage.Cursor = _zoom > 1.01 ? Cursors.SizeAll : Cursors.Arrow;
     }
 
@@ -822,13 +843,113 @@ public partial class MainWindow : Window
     }
 
     // ------------------------------------------------------------------
-    //  Chrome / fullscreen
+    //  Window size / chrome
     // ------------------------------------------------------------------
+
+    private void SetLoadingWindowSize()
+    {
+        WindowState = WindowState.Normal;
+        Width = 620;
+        Height = 460;
+        CenterWindow();
+    }
+
+    private void FitWindowToContent(double contentWidth, double contentHeight)
+    {
+        if (_isFullscreen || !IsViewerVisible || contentWidth <= 0 || contentHeight <= 0)
+        {
+            return;
+        }
+
+        var work = SystemParameters.WorkArea;
+        var maxWidth = Math.Max(ViewerMinWidth, work.Width * 0.94);
+        var maxHeight = Math.Max(ViewerMinHeight, work.Height * 0.94);
+        var maxContentHeight = Math.Max(220, maxHeight - ToolbarHeight);
+
+        var scale = Math.Min(1.0, Math.Min(maxWidth / contentWidth, maxContentHeight / contentHeight));
+        var targetWidth = Math.Clamp(contentWidth * scale, ViewerMinWidth, maxWidth);
+        var targetHeight = Math.Clamp(contentHeight * scale + ToolbarHeight, ViewerMinHeight, maxHeight);
+
+        WindowState = WindowState.Normal;
+        Width = targetWidth;
+        Height = targetHeight;
+        Left = work.Left + (work.Width - targetWidth) / 2;
+        Top = work.Top + (work.Height - targetHeight) / 2;
+        MaximizeButton.Visibility = Visibility.Collapsed;
+    }
+
+    private void CenterWindow()
+    {
+        var work = SystemParameters.WorkArea;
+        Left = work.Left + (work.Width - Width) / 2;
+        Top = work.Top + (work.Height - Height) / 2;
+    }
+
+    private void RestoreHomeBounds()
+    {
+        WindowState = WindowState.Normal;
+        var work = SystemParameters.WorkArea;
+
+        var width = _hasHomeBounds ? _homeBounds.Width : HomeWidth;
+        var height = _hasHomeBounds ? _homeBounds.Height : HomeHeight;
+        width = Math.Clamp(width, 840, Math.Max(840, work.Width));
+        height = Math.Clamp(height, 520, Math.Max(520, work.Height));
+
+        Width = width;
+        Height = height;
+        Left = _hasHomeBounds
+            ? Math.Clamp(_homeBounds.Left, work.Left, Math.Max(work.Left, work.Right - width))
+            : work.Left + (work.Width - width) / 2;
+        Top = _hasHomeBounds
+            ? Math.Clamp(_homeBounds.Top, work.Top, Math.Max(work.Top, work.Bottom - height))
+            : work.Top + (work.Height - height) / 2;
+    }
+
+    private void EnterViewerChrome()
+    {
+        HomeView.Visibility = Visibility.Collapsed;
+        ViewerView.Visibility = Visibility.Visible;
+        ViewerHeader.Visibility = Visibility.Visible;
+        ViewerActions.Visibility = Visibility.Visible;
+        MaximizeButton.Visibility = Visibility.Collapsed;
+        MinWidth = ViewerMinWidth;
+        MinHeight = ViewerMinHeight;
+        TitleRow.Height = new GridLength(ToolbarHeight);
+        TitleBar.Visibility = Visibility.Visible;
+        WindowState = WindowState.Normal;
+
+        if (WindowChrome.GetWindowChrome(this) is { } chrome)
+        {
+            chrome.CaptionHeight = ToolbarHeight;
+        }
+    }
+
+    private void ShowHomeChrome()
+    {
+        ViewerHeader.Visibility = Visibility.Collapsed;
+        ViewerActions.Visibility = Visibility.Collapsed;
+        MaximizeButton.Visibility = Visibility.Visible;
+        MinWidth = 840;
+        MinHeight = 520;
+        TitleRow.Height = new GridLength(ToolbarHeight);
+        TitleBar.Visibility = Visibility.Visible;
+
+        if (WindowChrome.GetWindowChrome(this) is { } chrome)
+        {
+            chrome.CaptionHeight = ToolbarHeight;
+        }
+    }
 
     private void Window_Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
     private void Window_Maximize_Click(object sender, RoutedEventArgs e)
     {
+        if (IsViewerVisible)
+        {
+            ToggleFullscreen();
+            return;
+        }
+
         WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
     }
 
@@ -836,14 +957,18 @@ public partial class MainWindow : Window
 
     private void Window_StateChanged(object sender, EventArgs e)
     {
+        if (IsViewerVisible && WindowState == WindowState.Maximized && !_isFullscreen)
+        {
+            EnterFullscreen();
+            return;
+        }
+
         if (MaximizeButton is not null)
         {
             MaximizeButton.Content = WindowState == WindowState.Maximized ? "\uE923" : "\uE922";
             MaximizeButton.ToolTip = WindowState == WindowState.Maximized ? "还原" : "最大化";
         }
     }
-
-    private void Fullscreen_Click(object sender, RoutedEventArgs e) => ToggleFullscreen();
 
     private void ToggleFullscreen()
     {
@@ -859,7 +984,7 @@ public partial class MainWindow : Window
 
     private void EnterFullscreen()
     {
-        if (_isFullscreen)
+        if (_isFullscreen || !IsViewerVisible)
         {
             return;
         }
@@ -867,20 +992,18 @@ public partial class MainWindow : Window
         _isFullscreen = true;
         _restoreState = WindowState;
         _restoreTitleHeight = TitleRow.Height;
+        _preFullscreenBounds = WindowState == WindowState.Maximized && RestoreBounds.Width > 0
+            ? RestoreBounds
+            : new Rect(Left, Top, Width, Height);
 
         TitleRow.Height = new GridLength(0);
         TitleBar.Visibility = Visibility.Collapsed;
-        InfoBar.Visibility = Visibility.Collapsed;
-        MediaStage.Margin = new Thickness(0);
-        VideoControls.Margin = new Thickness(0, 0, 0, 24);
         WindowState = WindowState.Maximized;
 
         if (WindowChrome.GetWindowChrome(this) is { } chrome)
         {
             chrome.CaptionHeight = 0;
         }
-
-        FullScreenButton.ToolTip = "退出全屏 (Esc / F)";
     }
 
     private void ExitFullscreen()
@@ -891,19 +1014,31 @@ public partial class MainWindow : Window
         }
 
         _isFullscreen = false;
-        TitleRow.Height = _restoreTitleHeight.Value > 0 ? _restoreTitleHeight : new GridLength(48);
+        TitleRow.Height = _restoreTitleHeight.Value > 0 ? _restoreTitleHeight : new GridLength(ToolbarHeight);
         TitleBar.Visibility = Visibility.Visible;
-        InfoBar.Visibility = Visibility.Visible;
-        MediaStage.Margin = new Thickness(0, 0, 0, 60);
-        VideoControls.Margin = new Thickness(0, 0, 0, 72);
-        WindowState = _restoreState == WindowState.Maximized ? WindowState.Maximized : WindowState.Normal;
+        WindowState = WindowState.Normal;
+
+        if (_preFullscreenBounds.Width > 0)
+        {
+            Width = _preFullscreenBounds.Width;
+            Height = _preFullscreenBounds.Height;
+            Left = _preFullscreenBounds.Left;
+            Top = _preFullscreenBounds.Top;
+        }
 
         if (WindowChrome.GetWindowChrome(this) is { } chrome)
         {
-            chrome.CaptionHeight = 48;
+            chrome.CaptionHeight = ToolbarHeight;
         }
 
-        FullScreenButton.ToolTip = "全屏 (F)";
+        if (CurrentItem?.Kind == TisMediaKind.Image && ImageHost.Source is BitmapSource image)
+        {
+            FitWindowToContent(image.PixelWidth, image.PixelHeight);
+        }
+        else if (_videoReady && VideoHost.NaturalVideoWidth > 0)
+        {
+            FitWindowToContent(VideoHost.NaturalVideoWidth, VideoHost.NaturalVideoHeight);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -919,10 +1054,7 @@ public partial class MainWindow : Window
         ErrorOverlay.Visibility = Visibility.Collapsed;
     }
 
-    private void HideLoadingOverlay()
-    {
-        LoadingOverlay.Visibility = Visibility.Collapsed;
-    }
+    private void HideLoadingOverlay() => LoadingOverlay.Visibility = Visibility.Collapsed;
 
     private void ShowError(string title, string detail)
     {
@@ -934,10 +1066,7 @@ public partial class MainWindow : Window
         BigPlayButton.Visibility = Visibility.Collapsed;
     }
 
-    private void HideError()
-    {
-        ErrorOverlay.Visibility = Visibility.Collapsed;
-    }
+    private void HideError() => ErrorOverlay.Visibility = Visibility.Collapsed;
 
     private void ShowToast(string message)
     {
@@ -976,11 +1105,152 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OpenFolder_Click(object sender, RoutedEventArgs e)
+    // ------------------------------------------------------------------
+    //  Image cache / prefetch
+    // ------------------------------------------------------------------
+
+    private bool TryGetCachedImage(string key, out BitmapSource image)
     {
-        if (_archive is not null)
+        if (_imageCache.TryGetValue(key, out image!))
         {
-            ShellIntegration.ShowInExplorer(_archive.FilePath);
+            TouchImageCache(key);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void AddImageToCache(string key, BitmapSource image)
+    {
+        if (_imageCache.ContainsKey(key))
+        {
+            TouchImageCache(key);
+            return;
+        }
+
+        while (_imageCache.Count >= ImageCacheLimit && _imageCacheOrder.First is { } first)
+        {
+            _imageCache.Remove(first.Value);
+            _imageCacheOrder.RemoveFirst();
+        }
+
+        _imageCache[key] = image;
+        _imageCacheOrder.AddLast(key);
+    }
+
+    private void TouchImageCache(string key)
+    {
+        var node = _imageCacheOrder.Find(key);
+        if (node is null)
+        {
+            return;
+        }
+
+        _imageCacheOrder.Remove(node);
+        _imageCacheOrder.AddLast(node);
+    }
+
+    private void ClearImageCache()
+    {
+        _imageCache.Clear();
+        _imageCacheOrder.Clear();
+        _cachedArchivePath = null;
+    }
+
+    private void StartPrefetch(int generation)
+    {
+        CancelPrefetch();
+        _prefetchCts = new CancellationTokenSource();
+        _ = PrefetchNextAsync(generation, _prefetchCts.Token);
+    }
+
+    private async Task PrefetchNextAsync(int generation, CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(140, token);
+            if (generation != _loadGeneration || _archive is null)
+            {
+                return;
+            }
+
+            var next = _index + 1;
+            if (next >= _archive.Items.Count)
+            {
+                return;
+            }
+
+            var item = _archive.Items[next];
+            if (item.Kind != TisMediaKind.Image || _imageCache.ContainsKey(item.EntryKey))
+            {
+                return;
+            }
+
+            var archive = _archive;
+            var bytes = await archive.ReadAllBytesAsync(item, token);
+            var decoded = await Task.Run(() => ImageLoader.Decode(bytes, (int)ImageMaxDimension), token);
+
+            if (token.IsCancellationRequested || generation != _loadGeneration)
+            {
+                return;
+            }
+
+            AddImageToCache(item.EntryKey, decoded.Image);
+        }
+        catch (OperationCanceledException)
+        {
+            // ignored
+        }
+        catch
+        {
+            // prefetch is best effort
+        }
+    }
+
+    private void CancelPrefetch()
+    {
+        try
+        {
+            _prefetchCts?.Cancel();
+            _prefetchCts?.Dispose();
+        }
+        catch
+        {
+            // ignored
+        }
+
+        _prefetchCts = null;
+    }
+
+    private void CacheCoverThumbnail(BitmapSource image)
+    {
+        if (_archive is null)
+        {
+            return;
+        }
+
+        var coverIndex = _archive.CoverIndex >= 0 ? _archive.CoverIndex : 0;
+        if (_index != coverIndex)
+        {
+            return;
+        }
+
+        try
+        {
+            var scale = 320.0 / Math.Max(image.PixelWidth, image.PixelHeight);
+            BitmapSource thumbnail = scale < 1
+                ? new TransformedBitmap(image, new ScaleTransform(scale, scale))
+                : image;
+            if (thumbnail.CanFreeze)
+            {
+                thumbnail.Freeze();
+            }
+
+            _recentPreviews[_archive.FilePath] = new ArchivePreview(thumbnail, TisMediaKind.Image);
+        }
+        catch
+        {
+            // thumbnail cache is best effort
         }
     }
 
@@ -1031,7 +1301,7 @@ public partial class MainWindow : Window
         }
 
         RecentFiles.Clear();
-        _recentThumbs.Clear();
+        _recentPreviews.Clear();
         RefreshRecent();
     }
 
@@ -1067,7 +1337,9 @@ public partial class MainWindow : Window
             });
         }
 
+        RecentCount.Text = $"{_recentCards.Count} 个文件";
         RecentEmpty.Visibility = _recentCards.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        RecentList.Visibility = _recentCards.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         _ = LoadRecentThumbnailsAsync(++_recentLoadVersion);
     }
 
@@ -1085,12 +1357,14 @@ public partial class MainWindow : Window
                 continue;
             }
 
-            BitmapSource? thumbnail;
-            if (!_recentThumbs.TryGetValue(card.Path, out thumbnail))
+            if (!_recentPreviews.TryGetValue(card.Path, out var preview))
             {
                 var path = card.Path;
-                thumbnail = await Task.Run(() => ArchiveThumbnailLoader.Load(path, 220));
-                _recentThumbs[path] = thumbnail;
+                preview = await Task.Run(() => ArchiveThumbnailLoader.LoadPreview(path, 360));
+                if (preview is not null)
+                {
+                    _recentPreviews[path] = preview;
+                }
             }
 
             if (version != _recentLoadVersion)
@@ -1098,7 +1372,12 @@ public partial class MainWindow : Window
                 return;
             }
 
-            card.Thumbnail = thumbnail;
+            if (preview is not null)
+            {
+                card.Thumbnail = preview.Thumbnail;
+                card.IsVideo = preview.Kind == TisMediaKind.Video;
+                card.Glyph = preview.Kind == TisMediaKind.Video ? "\uE714" : "\uE8B9";
+            }
         }
     }
 
@@ -1122,8 +1401,12 @@ public partial class MainWindow : Window
     private void UpdateAssociationHint()
     {
         var registered = FileAssociation.IsRegistered();
-        AssociationHint.Text = registered ? "已关联 · 双击 .tis 直接打开" : "让双击 .tis 直接打开本应用";
-        AssociationHint.Foreground = registered ? new SolidColorBrush(Color.FromRgb(0x89, 0xC9, 0xA6)) : (Brush)FindResource("Muted");
+        AssociationStatus.Text = registered
+            ? "已关联 · 双击 .tis 直接打开"
+            : "未关联 · 双击 .tis 不会自动打开";
+        AssociationStatus.Foreground = registered
+            ? new SolidColorBrush(Color.FromRgb(0x86, 0xC9, 0xA5))
+            : new SolidColorBrush(Color.FromRgb(0x6E, 0x6E, 0x75));
     }
 
     private void ToggleAssociation_Click(object sender, RoutedEventArgs e)
@@ -1315,6 +1598,7 @@ public partial class MainWindow : Window
         try
         {
             _loadCts?.Cancel();
+            _loadCts?.Dispose();
         }
         catch
         {
@@ -1328,6 +1612,7 @@ public partial class MainWindow : Window
     {
         _isClosing = true;
         CancelLoad();
+        CancelPrefetch();
         CloseVideo();
         _archive?.Dispose();
         _archive = null;
@@ -1335,12 +1620,17 @@ public partial class MainWindow : Window
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        RefreshRecent();
+        UpdateAssociationHint();
+        Activate();
         Focus();
     }
 
     public sealed class RecentCard : INotifyPropertyChanged
     {
         private BitmapSource? _thumbnail;
+        private bool _isVideo;
+        private string _glyph = "\uE8B9";
 
         public string Path { get; init; } = string.Empty;
 
@@ -1362,6 +1652,36 @@ public partial class MainWindow : Window
 
                 _thumbnail = value;
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Thumbnail)));
+            }
+        }
+
+        public bool IsVideo
+        {
+            get => _isVideo;
+            set
+            {
+                if (_isVideo == value)
+                {
+                    return;
+                }
+
+                _isVideo = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsVideo)));
+            }
+        }
+
+        public string Glyph
+        {
+            get => _glyph;
+            set
+            {
+                if (_glyph == value)
+                {
+                    return;
+                }
+
+                _glyph = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Glyph)));
             }
         }
 
